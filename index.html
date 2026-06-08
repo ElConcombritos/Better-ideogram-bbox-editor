@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ideogram BBox Editor</title>
+    <meta name="description" content="Visual bounding box editor for Ideogram 4 structured JSON prompts. Draw, move and resize elements on a canvas — no JSON writing required." />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Ideogram BBox Editor" />
+    <meta property="og:description" content="Visual bounding box editor for Ideogram 4 structured JSON prompts." />
+    <meta property="og:type" content="website" />
+    <!-- og:image: replace with an actual screenshot URL after deploy -->
+    <!-- <meta property="og:image" content="https://YOUR_USERNAME.github.io/ideogram-bbox-editor/preview.png" /> -->
+
+    <!-- Mobile warning — hidden on large screens via inline style -->
+    <style>
+      #mobile-warning {
+        display: none;
+        position: fixed; inset: 0; z-index: 9999;
+        background: #0d1120; color: #e2e8f0;
+        flex-direction: column; align-items: center; justify-content: center;
+        gap: 16px; padding: 32px; text-align: center;
+        font-family: system-ui, sans-serif;
+      }
+      #mobile-warning h2 { margin: 0; font-size: 20px; }
+      #mobile-warning p  { margin: 0; font-size: 14px; opacity: 0.65; line-height: 1.6; }
+      #mobile-warning button {
+        margin-top: 8px; padding: 10px 24px; border: none; border-radius: 8px;
+        background: #6366f1; color: #fff; font-size: 14px; cursor: pointer;
+      }
+      @media (max-width: 768px) { #mobile-warning { display: flex; } }
+    </style>
+  </head>
+  <body>
+    <div id="mobile-warning">
+      <h2>Desktop recommended</h2>
+      <p>Ideogram BBox Editor is designed for mouse and keyboard.<br />It may be hard to use on a small touch screen.</p>
+      <button onclick="document.getElementById('mobile-warning').style.display='none'">Continue anyway</button>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
