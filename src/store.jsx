@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components, react-hooks/refs */
 import { createContext, useContext, useReducer, useCallback, useRef } from 'react';
 
 // ── Aspect ratios ──────────────────────────────────────────────
@@ -26,7 +27,7 @@ const initialGlobal = {
 
 const makeInitialState = () => ({
   aspectRatio: '1:1',
-  elements: [],   // { id, type:'obj'|'text'|'bg', desc, text, bbox:{x,y,w,h}, palette:[] }
+  elements: [],   // { id, type:'obj'|'text'|'bg'|'character'|'animal'|'crowd', desc, text, bbox:{x,y,w,h}, palette:[] }
   selectedId: null,
   mode: 'draw',   // 'draw' | 'select'
   global: { ...initialGlobal },
@@ -52,6 +53,32 @@ function reducer(state, action) {
         text: '',
         bbox: action.bbox,
         palette: [],
+      };
+      return {
+        ...state,
+        elements: [...state.elements, el],
+        selectedId: el.id,
+        nextId: state.nextId + 1,
+        mode: 'select',
+      };
+    }
+
+    case 'PASTE_ELEMENT': {
+      if (!action.element) return state;
+      const offset = 20;
+      let bbox = action.element.bbox ? { ...action.element.bbox } : null;
+      if (bbox && action.canvasW && action.canvasH) {
+        bbox = {
+          ...bbox,
+          x: Math.max(0, Math.min(action.canvasW - bbox.w, bbox.x + offset)),
+          y: Math.max(0, Math.min(action.canvasH - bbox.h, bbox.y + offset)),
+        };
+      }
+      const el = {
+        ...action.element,
+        id: state.nextId,
+        bbox,
+        palette: [...(action.element.palette || [])],
       };
       return {
         ...state,
@@ -103,7 +130,7 @@ function reducer(state, action) {
 // Actions that modify canvas history (not ephemeral UI state)
 const HISTORY_ACTIONS = new Set([
   'SET_ASPECT', 'ADD_ELEMENT', 'UPDATE_ELEMENT', 'DELETE_ELEMENT',
-  'CLEAR_CANVAS', 'REORDER_ELEMENTS', 'UPDATE_GLOBAL', 'LOAD_STATE',
+  'CLEAR_CANVAS', 'REORDER_ELEMENTS', 'UPDATE_GLOBAL', 'LOAD_STATE', 'PASTE_ELEMENT',
 ]);
 
 function useUndoReducer() {
@@ -211,7 +238,7 @@ export function buildJSON(state) {
     }
     if (el.type === 'text' && el.text) obj.text = el.text;
     obj.desc = el.desc || '';
-    if (el.palette.length) obj.color_palette = el.palette.map(c => c.toUpperCase());
+    if (el.palette?.length) obj.color_palette = el.palette.map(c => c.toUpperCase());
     return obj;
   });
 

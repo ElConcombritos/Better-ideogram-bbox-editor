@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { useStore, buildJSON, ASPECT_RATIOS } from '../store';
 
 // Minimal JSON syntax highlighter — returns HTML string
@@ -8,7 +8,7 @@ function highlight(json) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(
-      /("(?:[^"\\]|\\.)*")(\s*:)?|(\b\d+\.?\d*\b)|(true|false|null)|([{}\[\],])/g,
+      /("(?:[^"\\]|\\.)*")(\s*:)?|(\b\d+\.?\d*\b)|(true|false|null)|([{}[\],])/g,
       (match, str, colon, num, kw, punct) => {
         if (str && colon)  return `<span class="json-key">${str}</span><span class="json-punct">:</span>`;
         if (str)           return `<span class="json-str">${str}</span>`;
@@ -61,13 +61,13 @@ export default function JsonPanel() {
       .replace(/,/g, ', ')
     : JSON.stringify(caption, null, 2);
 
-  const copy = useCallback(async () => {
+  const copy = async () => {
     // For Ideogram: compact with no spaces around separators
     const forModel = JSON.stringify(caption, null, compact ? 0 : 2);
     await navigator.clipboard.writeText(forModel);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
-  }, [caption, compact]);
+  };
 
   const exportFile = () => {
     const blob = new Blob([JSON.stringify(caption, null, 2)], { type: 'application/json' });

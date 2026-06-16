@@ -4,8 +4,8 @@ import { useStore, ASPECT_RATIOS } from '../store';
 const TEMPLATES = [
   {
     id: 'portrait',
-    name: 'Character Portrait',
-    desc: 'Full-body character, text overlay, background scene',
+    name: 'Portrait',
+    desc: 'Full-body subject, text overlay, background scene',
     ratio: '9:16',
     preview: (
       <svg viewBox="0 0 100 160" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -162,7 +162,7 @@ const TEMPLATES = [
       { type: 'text', bboxN: [260, 10, 330, 990], text: 'ELECTRONIC MUSIC FESTIVAL', desc: 'Medium-weight all-caps subtitle in warm amber, widely tracked, sitting below the main title.' },
       { type: 'text', bboxN: [360, 10, 430, 990], text: 'DAFT PUNK · BICEP · FRED AGAIN', desc: 'Headliner names in medium white sans-serif, separated by centered dots.' },
       { type: 'text', bboxN: [460, 10, 520, 990], text: 'WAREHOUSE 23 · MILAN · 14 SEP 2025', desc: 'Small venue and date details in amber, clean sans-serif.' },
-      { type: 'bg',  bboxN: [600, 0, 1000, 1000], desc: 'Abstract visual of a silhouetted crowd against dramatic stage lighting — purple and amber beams cutting through haze, smoke machines, and laser grid effects.' },
+      { type: 'bg',  bboxN: [600, 0, 1000, 1000], desc: 'Abstract visual of audience silhouettes against dramatic stage lighting - purple and amber beams cutting through haze, smoke machines, and laser grid effects.' },
     ],
   },
   {

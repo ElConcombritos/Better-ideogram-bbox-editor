@@ -1,6 +1,6 @@
 import { useStore } from '../store';
 
-export default function Toolbox({ snapEnabled, onSnapToggle }) {
+export default function Toolbox({ snapEnabled, onSnapToggle, onCopyElement, onPasteElement, canCopy, canPaste }) {
   const { state, dispatch } = useStore();
   const { mode, selectedId, elements } = state;
 
@@ -35,6 +35,28 @@ export default function Toolbox({ snapEnabled, onSnapToggle }) {
       >
         <SelectIcon />
         Select
+      </button>
+
+      <div className="toolbox-sep" />
+
+      {/* Copy / paste */}
+      <button
+        className="tool-btn"
+        onClick={onCopyElement}
+        disabled={!canCopy}
+        title="Copy selected element (Ctrl+C)"
+      >
+        <CopyIcon />
+        Copy
+      </button>
+      <button
+        className="tool-btn"
+        onClick={onPasteElement}
+        disabled={!canPaste}
+        title="Paste copied element (Ctrl+V)"
+      >
+        <PasteIcon />
+        Paste
       </button>
 
       <div className="toolbox-sep" />
@@ -126,6 +148,23 @@ function DeleteIcon() {
   return (
     <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 6h10M7 6V4h4v2M8 9v4M10 9v4M5 6l1 9h6l1-9" />
+    </svg>
+  );
+}
+function CopyIcon() {
+  return (
+    <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="6" y="5" width="8" height="10" rx="1" />
+      <path d="M4 12H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1" />
+    </svg>
+  );
+}
+function PasteIcon() {
+  return (
+    <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 4h6M7 2h4l1 2H6z" />
+      <rect x="4" y="4" width="10" height="12" rx="1" />
+      <path d="M7 8h4M7 11h3" />
     </svg>
   );
 }

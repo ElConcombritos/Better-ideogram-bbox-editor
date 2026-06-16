@@ -1,19 +1,38 @@
+import { useEffect, useState } from 'react';
 import { useStore, ASPECT_RATIOS, normalizeBbox } from '../store';
+import { loadSettings } from '../ai';
 import ColorPalette from './ColorPalette';
+
+const BASE_TYPES = ['obj', 'character', 'text', 'bg'];
+const ADVANCED_TYPES = ['animal', 'crowd'];
+
+function typeLabel(type) {
+  if (type === 'character') return 'char';
+  return type;
+}
 
 export default function PropertiesPanel() {
   const { state, dispatch } = useStore();
   const { elements, selectedId, aspectRatio } = state;
+  const [advancedTypes, setAdvancedTypes] = useState(() => loadSettings().advancedElementTypes);
   const { w: CW, h: CH } = ASPECT_RATIOS[aspectRatio];
   const el = elements.find(e => e.id === selectedId);
 
   const patch = (p) => dispatch({ type: 'UPDATE_ELEMENT', id: selectedId, patch: p });
+  const typeOptions = advancedTypes ? [...BASE_TYPES, ...ADVANCED_TYPES] : [...BASE_TYPES];
+  if (el?.type && !typeOptions.includes(el.type)) typeOptions.push(el.type);
+
+  useEffect(() => {
+    const onSettings = (event) => setAdvancedTypes(Boolean(event.detail?.advancedElementTypes));
+    window.addEventListener('ideogram-settings-updated', onSettings);
+    return () => window.removeEventListener('ideogram-settings-updated', onSettings);
+  }, []);
 
   if (!el) {
     return (
       <div className="panel-body">
         <div className="empty-state">
-          <div className="empty-state-icon">⬡</div>
+          <div className="empty-state-icon">[]</div>
           <div className="empty-state-text">
             {state.mode === 'draw'
               ? 'Drag on the canvas to create a bounding box'
@@ -29,21 +48,19 @@ export default function PropertiesPanel() {
 
   return (
     <div className="panel-body">
-      {/* Type */}
       <div className="field-group">
         <div className="field-label">Type</div>
         <div className="type-selector">
-          {['obj', 'text', 'bg'].map(t => (
+          {typeOptions.map(t => (
             <button
               key={t}
               className={`type-btn${el.type === t ? ` active-${t}` : ''}`}
               onClick={() => patch({ type: t })}
-            >{t}</button>
+            >{typeLabel(t)}</button>
           ))}
         </div>
       </div>
 
-      {/* Text field — only for type "text" */}
       {el.type === 'text' && (
         <div className="field-group">
           <div className="field-label">Text content</div>
@@ -57,25 +74,22 @@ export default function PropertiesPanel() {
         </div>
       )}
 
-      {/* Description */}
       <div className="field-group">
         <div className="field-label">Description</div>
         <textarea
           autoComplete="off" data-form-type="other"
           value={el.desc}
-          placeholder="Describe this element in detail…"
+          placeholder="Describe this element in detail..."
           onChange={(e) => patch({ desc: e.target.value })}
           rows={4}
         />
       </div>
 
-      {/* Color palette */}
       <div className="field-group">
         <div className="field-label">Color palette <span style={{ color: 'var(--text-muted)', textTransform: 'none', fontWeight: 400 }}>(max 5)</span></div>
         <ColorPalette colors={el.palette} onChange={(p) => patch({ palette: p })} max={5} />
       </div>
 
-      {/* BBox coords */}
       {bboxCoords && (
         <div className="field-group">
           <div className="field-label">BBox [y_min, x_min, y_max, x_max]</div>
@@ -115,7 +129,7 @@ function ElementList({ elements, selectedId, dispatch }) {
               style={{ width: 22, height: 22, fontSize: 13 }}
               title="Delete element"
               onClick={(ev) => { ev.stopPropagation(); dispatch({ type: 'DELETE_ELEMENT', id: e.id }); }}
-            >×</button>
+            >x</button>
           </div>
         ))}
       </div>

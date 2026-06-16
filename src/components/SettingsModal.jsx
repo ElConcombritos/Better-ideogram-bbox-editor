@@ -1,17 +1,40 @@
 import { useState } from 'react';
-import { loadSettings, saveSettings } from '../ai';
+import { getProviderDefaultModel, loadSettings, saveSettings } from '../ai';
 
 const PROVIDERS = [
-  { id: 'openai',     label: 'OpenAI',      model: 'gpt-4o-mini',          hint: 'Get a key at platform.openai.com' },
-  { id: 'anthropic',  label: 'Anthropic',   model: 'claude-haiku-4-5',     hint: 'Get a key at console.anthropic.com' },
-  { id: 'openrouter', label: 'OpenRouter',  model: 'openai/gpt-4.1-mini',  hint: 'Get a key at openrouter.ai — supports 300+ models' },
+  { id: 'openai', label: 'OpenAI', hint: 'OpenAI-compatible chat completions.' },
+  { id: 'anthropic', label: 'Anthropic', hint: 'Claude Messages API.' },
+  { id: 'openrouter', label: 'OpenRouter', hint: 'OpenAI-compatible router for many models.' },
+  { id: 'mistral', label: 'Mistral', hint: 'Mistral chat completions API.' },
+  { id: 'google', label: 'Google AI Studio', hint: 'Gemini generateContent API.' },
+  { id: 'lmstudio', label: 'LM Studio', hint: 'Local OpenAI-compatible server.' },
 ];
 
 const BACKENDS = [
-  { id: 'ollama', label: 'Ollama only',  desc: 'Always use local Ollama — error if offline' },
-  { id: 'auto',   label: 'Auto',         desc: 'Ollama if running, cloud fallback otherwise' },
-  { id: 'cloud',  label: 'Cloud only',   desc: 'Always use the cloud provider below' },
+  { id: 'ollama', label: 'Ollama only', desc: 'Always use local Ollama and error if offline.' },
+  { id: 'auto', label: 'Auto', desc: 'Try Ollama first, then fall back to the selected provider.' },
+  { id: 'cloud', label: 'Provider only', desc: 'Always use the selected provider.' },
 ];
+
+const inputStyle = {
+  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border)',
+  borderRadius: 6,
+  padding: '7px 10px',
+  fontSize: 13,
+  color: 'var(--text)',
+  fontFamily: 'monospace',
+};
+
+function Field({ label, children, hint }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>{label}</label>
+      {children}
+      {hint && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{hint}</div>}
+    </div>
+  );
+}
 
 export default function SettingsModal({ onClose }) {
   const initial = loadSettings();
@@ -19,39 +42,46 @@ export default function SettingsModal({ onClose }) {
   const [provider, setProvider] = useState(initial.provider || 'openai');
   const [model, setModel] = useState(initial.model || '');
   const [apiKey, setApiKey] = useState(initial.apiKey || '');
+  const [lmStudioUrl, setLmStudioUrl] = useState(initial.lmStudioUrl || 'http://localhost:1234/v1');
+  const [advancedElementTypes, setAdvancedElementTypes] = useState(Boolean(initial.advancedElementTypes));
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const selectedProvider = PROVIDERS.find(p => p.id === provider);
-  const selectedBackend = BACKENDS.find(b => b.id === backend);
+  const selectedProvider = PROVIDERS.find(p => p.id === provider) || PROVIDERS[0];
+  const selectedBackend = BACKENDS.find(b => b.id === backend) || BACKENDS[1];
+  const providerNeedsKey = provider !== 'lmstudio';
 
-  // When switching provider, clear the custom model so the placeholder updates
   const handleProviderChange = (id) => {
     setProvider(id);
     setModel('');
   };
 
   const save = () => {
-    saveSettings({ backend, provider, model: model.trim(), apiKey: apiKey.trim() });
+    saveSettings({
+      backend,
+      provider,
+      model: model.trim(),
+      apiKey: apiKey.trim(),
+      lmStudioUrl: lmStudioUrl.trim(),
+      advancedElementTypes,
+    });
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
   };
 
   return (
     <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal" style={{ maxWidth: 480 }}>
+      <div className="modal settings-modal">
         <div className="modal-header">
           <div>
             <div className="modal-title">Settings</div>
             <div className="modal-subtitle">AI backend for Magic Prompt and Generate</div>
           </div>
-          <button className="btn btn-ghost btn-icon" style={{ marginLeft: 12 }} onClick={onClose}>✕</button>
+          <button className="btn btn-ghost btn-icon" style={{ marginLeft: 12 }} onClick={onClose}>x</button>
         </div>
 
-        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Backend selector */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>AI backend</label>
+        <div className="modal-body settings-body">
+          <Field label="AI backend" hint={selectedBackend.desc}>
             <div style={{ display: 'flex', gap: 6 }}>
               {BACKENDS.map(b => (
                 <button
@@ -64,88 +94,91 @@ export default function SettingsModal({ onClose }) {
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{selectedBackend.desc}</div>
-          </div>
+          </Field>
 
-          {/* Ollama info (shown when not cloud-only) */}
           {backend !== 'cloud' && (
-            <div style={{ background: 'var(--bg-3)', borderRadius: 6, padding: '10px 12px', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              Ollama at <code>localhost:11434</code> · model <code>{MODEL_LABEL}</code><br />
-              Change the model in <code>src/ollama.js</code> → <code>MODEL</code>.
+            <div className="settings-card" style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              Ollama at <code>localhost:11434</code> - model <code>gemma4:e2b</code>
             </div>
           )}
 
-          {/* Provider + Model (shown when not ollama-only) */}
-          {backend !== 'ollama' && (<>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>Cloud provider</label>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {PROVIDERS.map(p => (
-                  <button
-                    key={p.id}
-                    className={`btn ${provider === p.id ? 'btn-accent' : 'btn-ghost'}`}
-                    style={{ flex: 1, fontSize: 12 }}
-                    onClick={() => handleProviderChange(p.id)}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{selectedProvider.hint}</div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>Model</label>
-              <input
-                type="text"
-                value={model}
-                onChange={e => setModel(e.target.value)}
-                placeholder={selectedProvider.model}
-                style={{
-                  background: 'var(--bg-3)', border: '1px solid var(--border)',
-                  borderRadius: 6, padding: '7px 10px', fontSize: 13,
-                  color: 'var(--text-primary)', fontFamily: 'monospace',
-                }}
-                onKeyDown={e => e.key === 'Enter' && save()}
-              />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                Leave blank to use the default. For OpenRouter, use the full model ID (e.g. <code>openai/gpt-4.1-mini</code>).
-              </div>
-            </div>
-          </>)}
-
-          {/* API key (shown when not ollama-only) */}
           {backend !== 'ollama' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>API Key</label>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input
-                type={showKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-                placeholder="Paste your API key here…"
-                style={{
-                  flex: 1, background: 'var(--bg-3)', border: '1px solid var(--border)',
-                  borderRadius: 6, padding: '7px 10px', fontSize: 13,
-                  color: 'var(--text-primary)', fontFamily: 'monospace',
-                }}
-                onKeyDown={e => e.key === 'Enter' && save()}
-              />
-              <button className="btn btn-ghost btn-icon" onClick={() => setShowKey(v => !v)} title={showKey ? 'Hide key' : 'Show key'}>
-                {showKey ? <EyeOffIcon /> : <EyeIcon />}
-              </button>
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              Stored in browser localStorage only — never sent to any server other than the selected provider.
-            </div>
-          </div>
+            <>
+              <Field label="Cloud provider" hint={selectedProvider.hint}>
+                <div className="provider-grid">
+                  {PROVIDERS.map(p => (
+                    <button
+                      key={p.id}
+                      className={`btn ${provider === p.id ? 'btn-accent' : 'btn-ghost'}`}
+                      onClick={() => handleProviderChange(p.id)}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              {provider === 'lmstudio' && (
+                <Field label="LM Studio base URL" hint="Start the LM Studio local server, then keep the /v1 base URL here.">
+                  <input type="text" value={lmStudioUrl} onChange={e => setLmStudioUrl(e.target.value)} style={inputStyle} />
+                </Field>
+              )}
+
+              <Field
+                label="Model"
+                hint={provider === 'openrouter'
+                  ? 'For OpenRouter, use the full model ID.'
+                  : 'Leave blank to use the provider default.'}
+              >
+                <input
+                  type="text"
+                  value={model}
+                  onChange={e => setModel(e.target.value)}
+                  placeholder={getProviderDefaultModel(provider)}
+                  style={inputStyle}
+                  onKeyDown={e => e.key === 'Enter' && save()}
+                />
+              </Field>
+
+              {providerNeedsKey && (
+                <Field label="API key" hint="Stored in browser localStorage and only sent to the selected provider.">
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      type={showKey ? 'text' : 'password'}
+                      value={apiKey}
+                      onChange={e => setApiKey(e.target.value)}
+                      placeholder="Paste your API key here"
+                      style={{ ...inputStyle, flex: 1 }}
+                      onKeyDown={e => e.key === 'Enter' && save()}
+                    />
+                    <button className="btn btn-ghost btn-icon" onClick={() => setShowKey(v => !v)} title={showKey ? 'Hide key' : 'Show key'}>
+                      {showKey ? <EyeOffIcon /> : <EyeIcon />}
+                    </button>
+                  </div>
+                </Field>
+              )}
+            </>
           )}
 
-          {/* Save */}
+          <div className="settings-card settings-toggle-card">
+            <div>
+              <div className="settings-toggle-title">Extra element types</div>
+              <div className="settings-toggle-desc">Adds Animal and Crowd to the element type selector.</div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={advancedElementTypes}
+                onChange={e => setAdvancedElementTypes(e.target.checked)}
+              />
+              <span className="switch-track" />
+            </label>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
             <button className={`btn ${saved ? 'btn-active' : 'btn-accent'}`} onClick={save}>
-              {saved ? '✓ Saved' : 'Save'}
+              {saved ? 'Saved' : 'Save'}
             </button>
           </div>
         </div>
@@ -153,9 +186,6 @@ export default function SettingsModal({ onClose }) {
     </div>
   );
 }
-
-// Needed for the hint text — mirrors the constant in ollama.js
-const MODEL_LABEL = 'gemma4:e2b';
 
 function EyeIcon() {
   return (
@@ -165,6 +195,7 @@ function EyeIcon() {
     </svg>
   );
 }
+
 function EyeOffIcon() {
   return (
     <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

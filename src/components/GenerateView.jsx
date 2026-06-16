@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { loadSettings } from '../ai';
+import { getProviderDefaultModel, loadSettings } from '../ai';
 
 const SUGGESTIONS = [
   { label: 'Portrait', text: 'A dramatic noir photograph of a rain-soaked Tokyo street at night. A lone detective under a red neon sign.' },
@@ -10,19 +10,12 @@ const SUGGESTIONS = [
   { label: 'Fantasy', text: 'A fantasy warrior in silver armor standing on a cliff edge, stormy sky, dramatic rim lighting.' },
 ];
 
-const PROVIDER_MODELS = {
-  openai:     'gpt-4o-mini',
-  anthropic:  'claude-haiku-4-5',
-  openrouter: 'openai/gpt-4.1-mini',
-};
-
 function activeBackendLabel() {
   const { backend = 'auto', provider = 'openai', model } = loadSettings();
-  if (backend === 'ollama') return 'Ollama (gemma4:e2b)';
-  const providerModel = model?.trim() || PROVIDER_MODELS[provider] || provider;
+  if (backend === 'ollama') return 'Ollama';
+  const providerModel = model?.trim() || getProviderDefaultModel(provider);
   if (backend === 'cloud') return providerModel;
-  // auto: show both, Ollama preferred
-  return `Ollama → ${providerModel} fallback`;
+  return `Ollama -> ${providerModel} fallback`;
 }
 
 export default function GenerateView({ onGenerate, magicStatus }) {
@@ -38,7 +31,10 @@ export default function GenerateView({ onGenerate, magicStatus }) {
   };
 
   const onKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submit();
+    }
   };
 
   const applySuggestion = (text) => {
@@ -49,20 +45,18 @@ export default function GenerateView({ onGenerate, magicStatus }) {
   return (
     <div className="generate-view">
       <div className="generate-view-inner">
-        {/* Header */}
         <div className="generate-header">
           <h1 className="generate-title">Describe your image</h1>
           <p className="generate-subtitle">
-            AI will build the full Ideogram 4 JSON prompt for you — bounding boxes, style, colors and all.
+            AI will build the full Ideogram 4 JSON prompt for you - bounding boxes, style, colors and all.
           </p>
         </div>
 
-        {/* Main input */}
         <div className={`generate-box${isLoading ? ' loading' : ''}`}>
           {isLoading ? (
             <div className="generate-thinking">
               <div className="generate-spinner" />
-              <span>Building your prompt with <strong>{backendLabel}</strong>…</span>
+              <span>Building your prompt with <strong>{backendLabel}</strong>...</span>
             </div>
           ) : (
             <>
@@ -71,7 +65,7 @@ export default function GenerateView({ onGenerate, magicStatus }) {
                 className="generate-textarea"
                 value={value}
                 rows={3}
-                placeholder="A cinematic portrait of a samurai at golden hour, 9:16, shallow depth of field…"
+                placeholder="A cinematic portrait of a samurai at golden hour, 9:16, shallow depth of field..."
                 autoFocus
                 onChange={(e) => {
                   setValue(e.target.value);
@@ -81,7 +75,7 @@ export default function GenerateView({ onGenerate, magicStatus }) {
                 onKeyDown={onKeyDown}
               />
               <div className="generate-box-footer">
-                <span className="generate-hint"><kbd>Enter</kbd> to generate · <kbd>Shift+Enter</kbd> new line</span>
+                <span className="generate-hint"><kbd>Enter</kbd> to generate - <kbd>Shift+Enter</kbd> new line</span>
                 <button
                   className={`generate-send${value.trim() ? ' active' : ''}`}
                   onClick={submit}
@@ -94,7 +88,6 @@ export default function GenerateView({ onGenerate, magicStatus }) {
           )}
         </div>
 
-        {/* Suggestions */}
         {!isLoading && (
           <div className="generate-suggestions">
             <div className="generate-suggestions-label">Try an example</div>

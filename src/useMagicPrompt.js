@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { magicPrompt, generateFromPrompt } from './ai';
 import { buildJSON, ASPECT_RATIOS } from './store';
 
-function captionToState(caption, aspectRatio, currentState) {
+export function captionToState(caption, aspectRatio, currentState) {
   const { w: CW, h: CH } = ASPECT_RATIOS[aspectRatio];
 
   const gPatch = {
@@ -30,7 +30,14 @@ function captionToState(caption, aspectRatio, currentState) {
         h: Math.max(8, ((y2 - y1) / 1000) * CH),
       };
     }
-    return { id: i + 1, type: el.type || 'obj', desc: el.desc || '', text: el.text || '', bbox, palette: el.color_palette || [] };
+    return {
+      id: i + 1,
+      type: el.type || 'obj',
+      desc: el.desc || '',
+      text: el.text || '',
+      bbox,
+      palette: el.color_palette || [],
+    };
   });
 
   return {

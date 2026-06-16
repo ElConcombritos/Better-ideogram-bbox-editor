@@ -23,6 +23,19 @@ The AI features (**Magic Prompt** and **Generate from text**) are optional accel
 
 ---
 
+## What's new in this fork
+
+- Generate now retries twice after a failed request or invalid JSON response.
+- Canvas navigation supports panning by holding the middle mouse button.
+- Elements can be copied and pasted from the toolbox or with `Ctrl+C` / `Ctrl+V`.
+- New element type: `character`, for people, superheroes, mascots, and named fictional subjects.
+- Optional advanced element types: `animal` and `crowd`, enabled from Settings.
+- Element colors are easier to distinguish on the canvas and in the element list.
+- Project history and quick save/load controls are available from the toolbar.
+- Cloud AI providers now include OpenAI, Anthropic, OpenRouter, Mistral, Google AI Studio, and LM Studio.
+
+---
+
 ## Installation
 
 ### Requirements
@@ -101,6 +114,9 @@ When using a cloud provider, select one and paste your API key in Settings:
 | OpenAI | `gpt-4o-mini` | [platform.openai.com](https://platform.openai.com) |
 | Anthropic | `claude-haiku-4-5` | [console.anthropic.com](https://console.anthropic.com) |
 | OpenRouter | `openai/gpt-4.1-mini` | [openrouter.ai](https://openrouter.ai) — free tier available |
+| Mistral | `mistral-large-latest` | [console.mistral.ai](https://console.mistral.ai) |
+| Google AI Studio | `gemini-2.5-flash` | [aistudio.google.com](https://aistudio.google.com) |
+| LM Studio | `local-model` | Local OpenAI-compatible server, no cloud key required |
 
 You can override the model ID in the **Model** field (leave blank to use the default).  
 API keys are stored in browser `localStorage` only — never sent anywhere except the selected provider.
@@ -142,7 +158,7 @@ Each box becomes one element in the JSON.
 After drawing, the editor switches to **Select** mode automatically.  
 Click an element to open its properties:
 
-- **Type** — `obj` (object), `text` (text overlay), or `bg` (background layer)
+- **Type** — `obj` (object), `character` (person / mascot / named fictional subject), `text` (text overlay), or `bg` (background layer). Enable **Extra element types** in Settings to add `animal` and `crowd`.
 - **Description** — what this region contains, in as much detail as you want
 - **Text content** — the literal string to render (only for type `text`)
 - **Color palette** — up to 5 hex colors for this element
@@ -205,6 +221,8 @@ All elements are fully editable after loading.
 | Draw mode | `D` |
 | Select mode | `V` |
 | Delete selected element | `Delete` / `Backspace` |
+| Copy selected element | `Ctrl+C` |
+| Paste copied element | `Ctrl+V` |
 | Undo | `Ctrl+Z` |
 | Redo | `Ctrl+Y` |
 
@@ -244,7 +262,7 @@ Bounding boxes: `[y_min, x_min, y_max, x_max]`, normalized 0–1000.
 - SVG canvas with native DOM events (mouse + touch)
 - `useReducer` + `useRef`-based undo/redo stack (100 steps)
 - [Ollama](https://ollama.com) for local AI inference (optional)
-- OpenAI / Anthropic / OpenRouter as cloud AI backend (optional)
+- OpenAI / Anthropic / OpenRouter / Mistral / Google AI Studio / LM Studio as AI backends (optional)
 
 ## License
 

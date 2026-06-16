@@ -34,7 +34,7 @@ function resizeBbox(orig, handle, dx, dy) {
 
 function snapVal(v) { return Math.round(v / SNAP) * SNAP; }
 
-export default function Canvas({ snapEnabled, magicLoading }) {
+export default function Canvas({ snapEnabled, magicLoading, onCopyElement, onPasteElement, canCopy, canPaste }) {
   const { state, dispatch } = useStore();
   const { elements, selectedId, mode, aspectRatio } = state;
   const { w: CW, h: CH } = ASPECT_RATIOS[aspectRatio];
@@ -43,8 +43,10 @@ export default function Canvas({ snapEnabled, magicLoading }) {
   const [drawing, setDrawing]   = useState(null);
   const [dragging, setDragging] = useState(null);
   const [resizing, setResizing] = useState(null);
+  const [panning, setPanning]   = useState(null);
   const [tooltip, setTooltip]   = useState(null);
   const [zoom, setZoom]         = useState(1);
+  const [pan, setPan]           = useState({ x: 0, y: 0 });
   const [zoomVisible, setZoomVisible] = useState(false);
   const zoomTimer = useRef(null);
 
@@ -86,30 +88,49 @@ export default function Canvas({ snapEnabled, magicLoading }) {
     return p;
   }, [toSVG, snapEnabled]);
 
+  const beginPan = useCallback((e) => {
+    if (e.button !== 1) return false;
+    e.preventDefault();
+    e.stopPropagation();
+    setPanning({ x0: e.clientX, y0: e.clientY, startPan: pan });
+    return true;
+  }, [pan]);
+
   const onBgDown = useCallback((e) => {
+    if (beginPan(e)) return;
     if (mode !== 'draw') { dispatch({ type: 'SELECT', id: null }); return; }
     e.preventDefault();
     const p = getPoint(e);
     setDrawing({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
-  }, [mode, dispatch, getPoint]);
+  }, [mode, dispatch, getPoint, beginPan]);
 
   const onElemDown = useCallback((e, id) => {
+    if (beginPan(e)) return;
     if (mode !== 'select') return;
     e.preventDefault(); e.stopPropagation();
     dispatch({ type: 'SELECT', id });
     const p = getPoint(e);
     const el = elements.find(el => el.id === id);
     setDragging({ id, ox: p.x - el.bbox.x, oy: p.y - el.bbox.y, startBbox: el.bbox });
-  }, [mode, elements, dispatch, getPoint]);
+  }, [mode, elements, dispatch, getPoint, beginPan]);
 
   const onHandleDown = useCallback((e, id, handle) => {
+    if (beginPan(e)) return;
     e.preventDefault(); e.stopPropagation();
     const p = getPoint(e);
     const el = elements.find(el => el.id === id);
     setResizing({ id, handle, startBbox: el.bbox, ox: p.x, oy: p.y });
-  }, [elements, getPoint]);
+  }, [elements, getPoint, beginPan]);
 
   const onMove = useCallback((e) => {
+    if (panning) {
+      e.preventDefault();
+      setPan({
+        x: panning.startPan.x + (e.clientX - panning.x0),
+        y: panning.startPan.y + (e.clientY - panning.y0),
+      });
+      return;
+    }
     const p = getPoint(e);
     if (drawing) {
       setDrawing(d => ({ ...d, x1: p.x, y1: p.y }));
@@ -128,7 +149,7 @@ export default function Canvas({ snapEnabled, magicLoading }) {
       const dx = p.x - resizing.ox, dy = p.y - resizing.oy;
       dispatch({ type: 'UPDATE_ELEMENT', id: resizing.id, patch: { bbox: resizeBbox(resizing.startBbox, resizing.handle, dx, dy) } });
     }
-  }, [drawing, dragging, resizing, dispatch, getPoint, CW, CH]);
+  }, [drawing, dragging, resizing, panning, dispatch, getPoint, CW, CH]);
 
   const onUp = useCallback(() => {
     if (drawing) {
@@ -136,7 +157,7 @@ export default function Canvas({ snapEnabled, magicLoading }) {
       const w = Math.abs(drawing.x1 - drawing.x0), h = Math.abs(drawing.y1 - drawing.y0);
       if (w >= MIN_SIZE && h >= MIN_SIZE) dispatch({ type: 'ADD_ELEMENT', bbox: { x, y, w, h } });
     }
-    setDrawing(null); setDragging(null); setResizing(null); setTooltip(null);
+    setDrawing(null); setDragging(null); setResizing(null); setPanning(null); setTooltip(null);
   }, [drawing, dispatch]);
 
   useEffect(() => {
@@ -152,6 +173,27 @@ export default function Canvas({ snapEnabled, magicLoading }) {
       window.removeEventListener('touchend',  onUp);
     };
   }, [onMove, onUp]);
+
+  useEffect(() => {
+    const isTextField = (target) => {
+      const tag = target?.tagName?.toLowerCase();
+      return tag === 'input' || tag === 'textarea' || target?.isContentEditable;
+    };
+    const onKeyDown = (e) => {
+      if (isTextField(e.target) || (!e.ctrlKey && !e.metaKey)) return;
+      const key = e.key.toLowerCase();
+      if (key === 'c' && canCopy) {
+        e.preventDefault();
+        onCopyElement?.();
+      }
+      if (key === 'v' && canPaste) {
+        e.preventDefault();
+        onPasteElement?.();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [canCopy, canPaste, onCopyElement, onPasteElement]);
 
   // Snap grid lines
   const gridLines = [];
@@ -181,8 +223,11 @@ export default function Canvas({ snapEnabled, magicLoading }) {
   const displayH = CH;
 
   return (
-    <div className="canvas-area">
-      <div className="canvas-zoom-wrap" style={{ transform: `scale(${zoom})` }}>
+    <div className={`canvas-area${panning ? ' is-panning' : ''}`}>
+      <div
+        className="canvas-zoom-wrap"
+        style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+      >
         <div className={`canvas-wrapper mode-${mode}`} style={{ width: displayW, height: displayH }}>
           <svg
             ref={svgRef}
@@ -191,13 +236,14 @@ export default function Canvas({ snapEnabled, magicLoading }) {
             viewBox={`0 0 ${CW} ${CH}`}
             style={{ display: 'block', background: '#ffffff' }}
             onMouseDown={onBgDown}
+            onAuxClick={(e) => e.button === 1 && e.preventDefault()}
             onTouchStart={onBgDown}
           >
             {gridLines}
 
             {elements.map((el, idx) => {
               if (!el.bbox) return null;
-              const { id, type, bbox, desc } = el;
+              const { id, type, bbox } = el;
               const { x, y, w, h } = bbox;
               const isSel = selectedId === id;
               const typeClass = `type-${type}`;

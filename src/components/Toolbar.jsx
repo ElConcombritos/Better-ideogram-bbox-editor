@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useStore, ASPECT_RATIOS } from '../store';
-import { checkOllamaStatus, loadSettings } from '../ai';
+import { checkOllamaStatus, getProviderDefaultModel, loadSettings } from '../ai';
 
-const PROVIDER_MODELS = { openai: 'gpt-4o-mini', anthropic: 'claude-haiku-4-5', openrouter: 'openai/gpt-4.1-mini' };
 function activeBackendShort() {
   const { backend = 'auto', provider = 'openai', model } = loadSettings();
   if (backend === 'ollama') return 'Ollama';
-  const m = model?.trim() || PROVIDER_MODELS[provider] || provider;
+  const m = model?.trim() || getProviderDefaultModel(provider);
   return backend === 'cloud' ? m : `Ollama / ${m}`;
 }
 
-export default function Toolbar({ onUndo, onRedo, canUndo, canRedo, onOpenTemplates, onMagic, magicStatus, magicError, onClearMagicError, appMode, onAppModeChange, onOpenSettings, theme, onThemeToggle }) {
+export default function Toolbar({ onUndo, onRedo, canUndo, canRedo, onOpenTemplates, onOpenHistory, onMagic, magicStatus, magicError, onClearMagicError, appMode, onAppModeChange, onOpenSettings, theme, onThemeToggle }) {
   const { state, dispatch } = useStore();
   const { aspectRatio } = state;
   const [ollamaOnline, setOllamaOnline] = useState(null); // null=checking, true, false
@@ -90,6 +89,9 @@ export default function Toolbar({ onUndo, onRedo, canUndo, canRedo, onOpenTempla
       {/* Templates */}
       <button className="btn btn-ghost" onClick={onOpenTemplates} title="Open template gallery">
         <TemplatesIcon /> Templates
+      </button>
+      <button className="btn btn-ghost" onClick={onOpenHistory} title="Open project history">
+        <HistoryIcon /> History
       </button>
 
       <div className="topbar-spacer" />
@@ -201,6 +203,15 @@ function TemplatesIcon() {
     </svg>
   );
 }
+function HistoryIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3v4h4" />
+      <path d="M3.5 7A5 5 0 1 0 5 3.5L3 5.5" />
+      <path d="M8 5.5V8l2 1.2" />
+    </svg>
+  );
+}
 function EditIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -213,21 +224,6 @@ function SettingsIcon() {
     <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="8" cy="8" r="2" />
       <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" />
-    </svg>
-  );
-}
-function GenerateIcon() {
-  return (
-    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: 'var(--text-muted)' }}>
-      <circle cx="8" cy="8" r="6" />
-      <path d="M8 5v3l2 2" />
-    </svg>
-  );
-}
-function SendIcon() {
-  return (
-    <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2L2 7l5 2 2 5 5-12z" />
     </svg>
   );
 }
