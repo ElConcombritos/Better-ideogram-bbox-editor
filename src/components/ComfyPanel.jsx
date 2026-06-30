@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { buildJSON } from '../store';
+import { ASPECT_RATIOS, buildJSON } from '../store';
 import { runComfyWorkflow } from '../comfyApi';
 
 const STORAGE_KEY = 'ideogram-bbox-comfy-settings';
@@ -7,6 +7,7 @@ const STORAGE_KEY = 'ideogram-bbox-comfy-settings';
 const DEFAULT_SETTINGS = {
   baseUrl: '/comfy',
   promptNodeId: '98:24',
+  resolutionNodeId: '37',
   seedNodeId: '98:18',
   filenameNodeId: '158',
   filenamePrefix: 'bbox_editor',
@@ -28,6 +29,17 @@ function findTextNodes(workflow) {
     }));
 }
 
+function findResolutionNodes(workflow) {
+  return Object.entries(workflow || {})
+    .filter(([, node]) => node?.inputs && typeof node.inputs === 'object' && 'aspect_ratio' in node.inputs)
+    .map(([id, node]) => ({
+      id,
+      classType: node.class_type || 'Unknown',
+      title: node._meta?.title || '',
+      aspectRatio: String(node.inputs.aspect_ratio || ''),
+    }));
+}
+
 function pickPromptNodeId(workflow, preferredId) {
   const nodes = findTextNodes(workflow);
   if (nodes.some(node => node.id === preferredId)) return preferredId;
@@ -40,6 +52,19 @@ function pickPromptNodeId(workflow, preferredId) {
 
   const clip = nodes.find(node => /cliptextencode/i.test(node.classType));
   return clip?.id || nodes[0]?.id || '';
+}
+
+function pickResolutionNodeId(workflow, preferredId) {
+  const nodes = findResolutionNodes(workflow);
+  if (nodes.some(node => node.id === preferredId)) return preferredId;
+
+  const selector = nodes.find(node => /resolutionselector/i.test(node.classType));
+  return selector?.id || nodes[0]?.id || '';
+}
+
+function formatResolutionSelectorValue(aspectRatio) {
+  const label = ASPECT_RATIOS[aspectRatio]?.label;
+  return label ? `${aspectRatio} (${label})` : aspectRatio;
 }
 
 function loadSettings() {
@@ -55,7 +80,7 @@ function loadSettings() {
   }
 }
 
-function cloneWithCaption(workflowText, caption, settings) {
+function cloneWithCaption(workflowText, caption, settings, aspectRatio) {
   const workflow = unwrapWorkflow(JSON.parse(workflowText));
   const promptNodeId = pickPromptNodeId(workflow, settings.promptNodeId);
   const promptNode = workflow[promptNodeId];
@@ -70,6 +95,12 @@ function cloneWithCaption(workflowText, caption, settings) {
   }
 
   promptNode.inputs.text = JSON.stringify(caption);
+
+  const resolutionNodeId = pickResolutionNodeId(workflow, settings.resolutionNodeId);
+  const resolutionNode = workflow[resolutionNodeId];
+  if (resolutionNode?.inputs && 'aspect_ratio' in resolutionNode.inputs) {
+    resolutionNode.inputs.aspect_ratio = formatResolutionSelectorValue(aspectRatio);
+  }
 
   const seedNode = workflow[settings.seedNodeId];
   if (seedNode?.inputs && 'noise_seed' in seedNode.inputs) {
@@ -94,6 +125,14 @@ export default function ComfyPanel({ state }) {
     if (!loadSettings().workflowText) return [];
     try {
       return findTextNodes(unwrapWorkflow(JSON.parse(loadSettings().workflowText)));
+    } catch {
+      return [];
+    }
+  });
+  const [resolutionNodes, setResolutionNodes] = useState(() => {
+    if (!loadSettings().workflowText) return [];
+    try {
+      return findResolutionNodes(unwrapWorkflow(JSON.parse(loadSettings().workflowText)));
     } catch {
       return [];
     }
@@ -124,16 +163,24 @@ export default function ComfyPanel({ state }) {
         const workflow = unwrapWorkflow(JSON.parse(text));
         const detectedTextNodes = findTextNodes(workflow);
         const promptNodeId = pickPromptNodeId(workflow, settings.promptNodeId);
+        const detectedResolutionNodes = findResolutionNodes(workflow);
+        const resolutionNodeId = pickResolutionNodeId(workflow, settings.resolutionNodeId);
 
         setSettings(current => {
-          const next = { ...current, workflowText: text, promptNodeId: promptNodeId || current.promptNodeId };
+          const next = {
+            ...current,
+            workflowText: text,
+            promptNodeId: promptNodeId || current.promptNodeId,
+            resolutionNodeId: resolutionNodeId || current.resolutionNodeId,
+          };
           localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
           return next;
         });
         setTextNodes(detectedTextNodes);
+        setResolutionNodes(detectedResolutionNodes);
         setMessage(
           promptNodeId
-            ? `Workflow loaded: ${file.name}. Prompt node: ${promptNodeId}`
+            ? `Workflow loaded: ${file.name}. Prompt: ${promptNodeId}${resolutionNodeId ? `, ratio: ${resolutionNodeId}` : ''}`
             : `Workflow loaded: ${file.name}, but no text node was detected.`
         );
       } catch (error) {
@@ -151,7 +198,7 @@ export default function ComfyPanel({ state }) {
     setPromptId('');
 
     try {
-      const workflow = cloneWithCaption(settings.workflowText, caption, settings);
+      const workflow = cloneWithCaption(settings.workflowText, caption, settings, state.aspectRatio);
       const result = await runComfyWorkflow({
         baseUrl: settings.baseUrl,
         workflow,
@@ -209,6 +256,37 @@ export default function ComfyPanel({ state }) {
             value={settings.seedNodeId}
             onChange={(event) => updateSetting('seedNodeId', event.target.value)}
             placeholder="98:18"
+          />
+        </div>
+      </div>
+
+      <div className="comfy-grid">
+        <div className="field-group">
+          <label className="field-label">Resolution node</label>
+          <input
+            type="text"
+            value={settings.resolutionNodeId}
+            onChange={(event) => updateSetting('resolutionNodeId', event.target.value)}
+            list="comfy-resolution-node-options"
+            placeholder="37"
+          />
+          <datalist id="comfy-resolution-node-options">
+            {resolutionNodes.map(node => (
+              <option
+                key={node.id}
+                value={node.id}
+                label={`${node.classType}${node.title ? ` - ${node.title}` : ''}`}
+              />
+            ))}
+          </datalist>
+        </div>
+        <div className="field-group">
+          <label className="field-label">Current ratio</label>
+          <input
+            type="text"
+            value={formatResolutionSelectorValue(state.aspectRatio)}
+            readOnly
+            title="Driven by the canvas aspect ratio selector"
           />
         </div>
       </div>

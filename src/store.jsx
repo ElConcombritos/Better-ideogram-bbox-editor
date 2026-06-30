@@ -202,6 +202,8 @@ export function buildJSON(state) {
 
   const caption = {};
 
+  caption.aspect_ratio = aspectRatio;
+
   if (g.high_level_description.trim())
     caption.high_level_description = g.high_level_description.trim();
 
