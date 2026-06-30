@@ -916,6 +916,44 @@ textarea { min-height: 72px; }
 .style-toggle-btn.active { background: var(--bg); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
 .style-toggle-btn:hover:not(.active) { color: var(--text-secondary); }
 
+.preset-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.preset-chip {
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  font-size: 11px;
+  line-height: 1.2;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.1s;
+}
+
+.preset-chip:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.preset-chip:active { transform: scale(0.97); }
+
+.style-note {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 /* ─────────────────────────────────────────────
    COLOR PALETTE
 ───────────────────────────────────────────── */

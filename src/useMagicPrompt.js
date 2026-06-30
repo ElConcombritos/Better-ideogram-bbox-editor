@@ -7,6 +7,8 @@ export function captionToState(caption, aspectRatio, currentState) {
 
   const gPatch = {
     high_level_description: caption.high_level_description || '',
+    clientStyle: currentState.global.clientStyle || '',
+    clientContext: currentState.global.clientContext || '',
     background: caption.compositional_deconstruction?.background || '',
     aesthetics: caption.style_description?.aesthetics || '',
     lighting:   caption.style_description?.lighting   || '',

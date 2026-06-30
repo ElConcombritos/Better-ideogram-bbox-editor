@@ -15,6 +15,8 @@ export const ASPECT_RATIOS = {
 // ── Initial state ──────────────────────────────────────────────
 const initialGlobal = {
   high_level_description: '',
+  clientStyle: '',
+  clientContext: '',
   aesthetics: '',
   lighting: '',
   medium: '',
@@ -209,10 +211,11 @@ export function buildJSON(state) {
 
   // style_description
   const hasStyle = g.aesthetics || g.lighting || g.medium ||
-    (g.styleMode === 'photo' ? g.photo : g.art_style);
+    g.clientStyle || (g.styleMode === 'photo' ? g.photo : g.art_style);
   if (hasStyle) {
     const sd = {};
-    if (g.aesthetics) sd.aesthetics = g.aesthetics;
+    const aesthetics = [g.clientStyle, g.aesthetics].filter(Boolean).join('; ');
+    if (aesthetics) sd.aesthetics = aesthetics;
     if (g.lighting)   sd.lighting   = g.lighting;
     if (g.styleMode === 'photo') {
       if (g.photo)  sd.photo  = g.photo;
@@ -227,7 +230,7 @@ export function buildJSON(state) {
 
   // compositional_deconstruction always present
   const cd = {};
-  cd.background = g.background || '';
+  cd.background = [g.clientContext, g.background].filter(Boolean).join(' ');
 
   cd.elements = elements.map(el => {
     const obj = {};
