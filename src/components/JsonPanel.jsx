@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useStore, buildJSON, ASPECT_RATIOS } from '../store';
+import ComfyPanel from './ComfyPanel';
 
 // Minimal JSON syntax highlighter — returns HTML string
 function highlight(json) {
@@ -149,6 +150,8 @@ export default function JsonPanel() {
         </button>
         <input ref={fileInputRef} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={importFile} />
       </div>
+
+      <ComfyPanel state={state} />
     </div>
   );
 }
